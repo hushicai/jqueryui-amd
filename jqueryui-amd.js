@@ -33,6 +33,17 @@ function mkDir(dir) {
     }
 }
 
+function readFile(filePath) {
+    var text = fs.readFileSync(filePath, 'utf8');
+
+    //Remove BOM just in case
+    if (text.indexOf('\uFEFF') === 0) {
+        text = text.substring(1, text.length);
+    }
+
+    return text;
+}
+
 /**
  * Converts the contents of a file to an AMD module.
  * @param {String} contents the file contents.
@@ -129,7 +140,7 @@ jqPaths.forEach(function (fileName) {
     var srcPath = jqUiSrcDir + fileName;
     if (fs.statSync(srcPath).isFile() && jsFileRegExp.test(srcPath)) {
         //console.log("Converting file: " + convertPath);
-        convert(fileName, fs.readFileSync(srcPath, 'utf8'));
+        convert(fileName, readFile(srcPath));
     }
 });
 
@@ -139,7 +150,7 @@ jqPaths.forEach(function (fileName) {
     var srcPath = jqUiSrcDir + 'i18n/' + fileName;
     if (fs.statSync(srcPath).isFile() && jsFileRegExp.test(srcPath)) {
         //console.log("Converting file: " + convertPath);
-        convert(fileName, fs.readFileSync(srcPath, 'utf8'));
+        convert(fileName, readFile(srcPath));
     }
 });
 

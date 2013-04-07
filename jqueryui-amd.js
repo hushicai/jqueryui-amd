@@ -17,7 +17,11 @@
 
 var fs = require('fs'),
     path = require('path'),
-    inDir = process.argv[2],
+    optimist = require('optimist'),
+    argv = optimist.argv,
+    inDir,
+    outDir,
+    depPrefix,
     jsFileRegExp = /\.js$/,
     dependStartRegExp =  /\*\s+Depends\:([^\/]+)\*\//,
     dotRegExp = /\./g,
@@ -25,6 +29,11 @@ var fs = require('fs'),
     exists = fs.existsSync || path.existsSync,
     jqUiSrcDir,
     jqPaths;
+
+inDir = argv.s;
+outDir = argv.d;
+depPrefix = argv.dep;
+
 
 function mkDir(dir) {
     if (!exists(dir)) {
@@ -54,30 +63,32 @@ function convert(fileName, contents) {
         match = dependStartRegExp.exec(contents),
         files = ["'jquery'"],
         fileParts = fileName.split('.'),
-        tempDir = inDir;
+        tempDir = outDir;
 
     //Strip off .js extension and convert jquery-ui to jqueryui,
     //generate module name.
     fileParts.pop();
-    if (fileParts[0].indexOf('jquery-ui') !== -1) {
-        moduleName = 'jqueryui';
-        outFileName = inDir + moduleName + '.js';
-    } else {
-        //convert preceding 'jquery' to 'jqueryui'
-        fileParts[0] = 'jqueryui';
-        //remove .ui from path since it is implied already from
-        //top level 'jqueryui' name.
-        if (fileParts[1] === 'ui') {
-            fileParts.splice(1, 1);
-        }
-        moduleName = fileParts.join('/');
-        outFileName = inDir + moduleName + '.js';
+    if (fileParts[0].indexOf('jquery-ui-i18n') !== -1) {
+        // moduleName = 'datepicker-i18n';
+        // fileParts.unshift('datepicker-i18n');
+        fileParts = fileParts[0].split('-');
+        fileParts[fileParts.length - 1] = 'datepicker-i18n';
+        // outFileName = outDir + moduleName + '.js';
+    } 
+    //convert preceding 'jquery' to 'jqueryui'
+    fileParts[0] = 'jqueryui';
+    //remove .ui from path since it is implied already from
+    //top level 'jqueryui' name.
+    if (fileParts[1] === 'ui') {
+        fileParts.splice(1, 1);
     }
+    moduleName = fileParts.join('/');
+    outFileName = outDir + moduleName + '.js';
 
     //If fileParts' last piece is a datepicker i18n bundle, make datepicker
     //an explicit dependency for it.
     if (fileParts[fileParts.length - 1].indexOf('datepicker-') === 0) {
-        files.push("'jqueryui/datepicker'");
+        files.push("'"+ depPrefix +"datepicker'");
     }
 
     //Make sure directories exist in the jqueryui section.
@@ -91,7 +102,7 @@ function convert(fileName, contents) {
 
     if (match) {
         match[1].replace(filesRegExp, function (match, depName) {
-            files.push("'./" + depName
+            files.push("'"+ depPrefix +"" + depName
                              //Remove .ui from the name if it is there,
                              //since it is already implied by the jqueryui
                              //name
@@ -113,22 +124,33 @@ function convert(fileName, contents) {
 
 //Make sure required fields are present.
 if (!inDir) {
-    console.log('Usage: jqueryui-amd inputDir');
+    console.log('Usage: jqueryui-amd --s=inputDir --d=outDir --dep=dependPrefix');
     process.exit(1);
 }
 
+
+
 //Normalize directory
 inDir = path.normalize(inDir);
-if (inDir.lastIndexOf('/') !== inDir.length - 1) {
-    inDir += '/';
-}
 
+if (!outDir) {
+    outDir = inDir;
+}
+if (outDir.lastIndexOf('/') !== outDir.length - 1) {
+    outDir += '/';
+}
+if (!depPrefix) {
+    depPrefix = './';
+}
+if (depPrefix.lastIndexOf('/') !== depPrefix.length - 1) {
+    depPrefix += '/';
+}
 //Make sure there is a ui directory in there, otherwise cannot
 //convert correctly.
 jqUiSrcDir = path.join(inDir, 'ui/');
 
 if (!exists(jqUiSrcDir) || !fs.statSync(jqUiSrcDir).isDirectory()) {
-    console.log('The directory does not appear to contain jQuery UI, ' +
+    console.log('Directory "'+ inDir +'" does not appear to contain jQuery UI, ' +
                 'not converting any files. Looking for "ui" directory ' +
                 'in the source directory failed.');
     process.exit(1);
@@ -154,4 +176,4 @@ jqPaths.forEach(function (fileName) {
     }
 });
 
-console.log("Done. See " + path.join(inDir, 'jqueryui') + ' for the AMD modules.');
+console.log("Done. See " + path.join(outDir, 'jqueryui') + ' for the AMD modules.');

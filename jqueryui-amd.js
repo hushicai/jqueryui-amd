@@ -22,6 +22,7 @@ var fs = require('fs'),
     inDir,
     outDir,
     depPrefix,
+    force = false,
     jsFileRegExp = /\.js$/,
     dependStartRegExp =  /\*\s+Depends\:([^\/]+)\*\//,
     dotRegExp = /\./g,
@@ -33,6 +34,7 @@ var fs = require('fs'),
 inDir = argv.s;
 outDir = argv.d;
 depPrefix = argv.dep;
+force = argv.force;
 
 
 function mkDir(dir) {
